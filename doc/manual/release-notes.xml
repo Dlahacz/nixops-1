@@ -3,11 +3,140 @@
 
 <title>NixOps Release Notes</title>
 
-
 <!--==================================================================-->
 
-<section xml:id="ssec-relnotes-1.6"><title>Release 1.6 (Mar 28, 2018)</title>
+<section xml:id="ssec-relnotes-1.7"><title>Release 1.7 (April 17, 2019)</title>
+<itemizedlist>
 
+  <listitem><para>General</para>
+    <itemizedlist>
+      <listitem><para>Mitigation for ssh StrictHostKeyChecking=no issue.</para></listitem>
+      <listitem><para>Fix nixops info --plain output.</para></listitem>
+      <listitem><para>Documentation fixes: add AWS VPC resources and fix some outdated command outputs.</para></listitem>
+      <listitem><para>Addition of Hashicorp's Vault AppRole resource.</para></listitem>
+      <warning>
+        <para>
+          Azure backend is now disabled after the updates to Azure's Python libraries in NixOS 19.03.
+          Please see <link xlink:href="https://github.com/NixOS/nixops/pull/1131">PR#1131</link> for
+          more details.
+        </para>
+        <para>
+          Existing Azure deployments should use NixOps release 1.6.1. We hope to revive the Azure
+          support in the future once the API compatibility issues are resolved.
+        </para>
+      </warning>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>AWS</para>
+    <itemizedlist>
+      <listitem><para>Add more auto retries to api calls to prevent eventual consistency issues.</para></listitem>
+      <listitem><para>Fix <code>nixops check</code> with NVMe devices.</para></listitem>
+      <listitem><para>Route53: normalize DNS hostname.</para></listitem>
+      <listitem><para>S3: support bucket lifecycle configuration as well as versioning.</para></listitem>
+      <listitem><para>S3: introduce persistOnDestroy for S3 buckets which allows keeping the bucket during a destroy for later usage</para></listitem>
+      <listitem><para>Fix backup-status output when backup is performed on a subset of devices.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>Datadog</para>
+    <itemizedlist>
+      <listitem><para>add tags for Datadog monitors</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>GCE</para>
+    <itemizedlist>
+      <listitem><para>Fix machines being leaked when running destroy after a stop operation.</para></listitem>
+      <listitem><para>make sure the machine exists before attempting a destroy.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>Hetzner</para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          Remove usage of local commands for network configuration.
+        </para>
+        <warning>
+          <para>
+            Note that this is incompatible with NixOS versions prior to 18.03, see <link xlink:href="https://nixos.org/nixos/manual/release-notes.html#sec-release-18.03-notable-changes">release-notes.</link>
+          </para>
+        </warning>
+      </listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>VirtualBox</para>
+    <itemizedlist>
+      <listitem><para>added NixOS 18.09/19.03 images.</para></listitem>
+      <listitem><para>handle deleted VMs from outside NixOps.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+</itemizedlist>
+
+<para>
+    This release has contributions from Amine Chikhaoui, Assassinkin,  aszlig, Aymen Memni,
+    Chaker Benhamed, Chawki Cheikch, David Kleuker, Domen Kožar, Dorra Hadrich, dzanot,
+    Eelco Dolstra, Jörg Thalheim, Kosyrev Serge,  Max Wilson,  Michael Bishop, Niklas Hambüchen,
+    Pierre Bourdon, PsyanticY, Robert Hensing.
+</para>
+
+</section>
+
+
+<section xml:id="ssec-relnotes-1.6.1"><title>Release 1.6.1 (Sep 14, 2018)</title>
+<itemizedlist>
+
+  <listitem><para>General</para>
+
+    <itemizedlist>
+      <listitem><para>Fix the deployment of machines with a large number of keys.</para></listitem>
+      <listitem><para>Show exit code of configuration activation script, when it is non-zero.</para></listitem>
+      <listitem><para>Ignore evaluation errors in destroy and delete operations.</para></listitem>
+      <listitem><para>Removed top-level Exception catch-all</para></listitem>
+      <listitem><para>Minor bugfixes.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>AWS</para>
+
+    <itemizedlist>
+      <listitem><para>Automatically retry certain API calls.</para></listitem>
+      <listitem><para>Fixed deployment errors when <code>deployment.route53.hostName</code> contains uppercase letters.</para></listitem>
+      <listitem><para>Support for GCE routes.</para></listitem>
+      <listitem><para>Support attaching NVMe disks.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>GCE</para>
+
+    <itemizedlist>
+      <listitem><para>Add labels for GCE volumes and snapshots.</para></listitem>
+      <listitem><para>Add option to enable IP forwarding.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+  <listitem><para>VirtualBox</para>
+
+    <itemizedlist>
+      <listitem><para>Use images from nixpkgs if available.</para></listitem>
+    </itemizedlist>
+  </listitem>
+
+
+</itemizedlist>
+
+<para>
+    This release has contributions from Amine Chikhaoui, aszlig, Aymen Memni,
+    Chaker Benhamed, Domen Kožar, Eelco Dolstra, Justin Humm, Michael Bishop,
+    Niklas Hambüchen, Rob Vermaas, Sergei Khoma.
+</para>
+
+</section>
+
+<section xml:id="ssec-relnotes-1.6"><title>Release 1.6 (Mar 28, 2018)</title>
 <itemizedlist>
 
   <listitem><para>General</para>
@@ -423,7 +552,7 @@
 <para>
     This release has contributions from
     aszlig, Bas van Dijk, Domen Kožar, Eelco Dolstra, Kevin Cox,
-    Paul Liu, Robin Gloster, Rob Vermaas, Russell O'Connor, Tristan Helmich 
+    Paul Liu, Robin Gloster, Rob Vermaas, Russell O'Connor, Tristan Helmich
     and Yves Parès (Ywen)
 </para>
 
@@ -526,15 +655,15 @@
 
     <itemizedlist>
       <listitem><para>NixOps now requires NixOS 13.10 and up.</para></listitem>
-      <listitem><para>Add <code>--all</code> option to <code>nixops destroy</code>, <code>nixops 
+      <listitem><para>Add <code>--all</code> option to <code>nixops destroy</code>, <code>nixops
       delete</code> and <code>nixops ssh-for-each</code>.</para></listitem>
       <listitem><para>The <code>-d</code> option now matches based on prefix for convenience
       when the specified uuid/id is not found.</para></listitem>
       <listitem><para>Resources can now be accessed via direct reference, i.e. you can use
-      <code>securityGroups = [ resources.ec2SecurityGroups.foo ];</code> in stead of 
+      <code>securityGroups = [ resources.ec2SecurityGroups.foo ];</code> in stead of
       <code>securityGroups = [ resources.ec2SecurityGroups.foo.name ];</code>.
       </para></listitem>
-      <listitem><para>Changed default value of <code>deployment.storeKeysOnMachine</code> to false, 
+      <listitem><para>Changed default value of <code>deployment.storeKeysOnMachine</code> to false,
       which is the more secure option. This can prevent unattended reboot from finishing, as keys will
       need to be pushed to the machine.</para></listitem>
     </itemizedlist>
@@ -548,14 +677,14 @@
       <listitem><para>Support all HVM instance types.</para></listitem>
       <listitem><para>Support <code>ap-southeast-1</code> region.</para></listitem>
       <listitem><para>Better handling of errors in pushing Route53 records.</para></listitem>
-      <listitem><para>Support using ARN's for applying instance profiles to EC2 instances. This 
+      <listitem><para>Support using ARN's for applying instance profiles to EC2 instances. This
       allows cross-account API access.</para></listitem>
       <listitem><para>Base HVM image was updated to allow using all emphemeral devices.</para></listitem>
-      <listitem><para>Instance ID is now available in 
+      <listitem><para>Instance ID is now available in
       nix through the <code>deployment.ec2.instanceId</code> option, set by nixops.</para></listitem>
       <listitem><para>
       Support independent provisioning of EBS volumes. Previously, EBS volumes could only be
-      created as part of an EC2 instance, meaning their lifetime was tied to the instance and 
+      created as part of an EC2 instance, meaning their lifetime was tied to the instance and
       they could not be managed separately.  Now they can be provisioned independently, e.g.:
 
       <programlisting>
@@ -585,7 +714,7 @@
       <listitem><para>Fix hard reset for rebooting to rescue mode.. This is particularly useful
       if you have a dead server and want to put it in rescue mode. Now it's possible to do that
       simply by running:
-    
+
       <programlisting>
       nixops reboot --hard --rescue --include=deadmachine
       </programlisting>
@@ -597,7 +726,7 @@
 
     <itemizedlist>
       <listitem><para>Require VirtualBox >= 4.3.0.</para></listitem>
-      <listitem><para>Support for shared folders in VirtualBox. You can mount host folder on the guest by setting the 
+      <listitem><para>Support for shared folders in VirtualBox. You can mount host folder on the guest by setting the
       deployment.virtualbox.sharedFolders option.</para></listitem>
       <listitem><para>Allow destroy if the VM is gone already</para></listitem>
     </itemizedlist>
@@ -620,7 +749,7 @@
 <itemizedlist>
 
   <listitem><para>Added a command-line option <emphasis>--include-keys</emphasis> to allow
-  importing SSH public host keys, of the machines that will be imported, to the 
+  importing SSH public host keys, of the machines that will be imported, to the
   <emphasis>.ssh/known_hosts</emphasis> of the user.
   </para></listitem>
 
@@ -659,7 +788,7 @@
 </itemizedlist>
 
 <para>
-  This release has contributions from aszlig, Ricardo Correia, 
+  This release has contributions from aszlig, Ricardo Correia,
   Eelco Dolstra, Rob Vermaas.
 </para>
 

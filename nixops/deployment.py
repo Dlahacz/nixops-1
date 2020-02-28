@@ -28,6 +28,7 @@ import platform
 from nixops.util import ansi_success
 import inspect
 import time
+import importlib
 
 class NixEvalError(Exception):
     pass
@@ -365,6 +366,9 @@ class Deployment(object):
         for x in tree.findall("attrs/attr[@name='machines']/attrs/attr"):
             name = x.get("name")
             cfg = config["machines"][name]
+            if cfg["targetEnv"] == "azure":
+                self.logger.warn("skipping Azure machine {}: the azure backend is now broken on nixops".format(name))
+                continue
             defn = _create_definition(x, cfg, cfg["targetEnv"])
             self.definitions[name] = defn
 
@@ -373,6 +377,9 @@ class Deployment(object):
             res_type = x.get("name")
             for y in x.findall("attrs/attr"):
                 name = y.get("name")
+                if "azure" in res_type:
+                   self.logger.warn("skipping Azure resource {} of type {}: the azure backend is now broken on nixops".format(name, res_type))
+                   continue
                 defn = _create_definition(y, config["resources"][res_type][name], res_type)
                 self.definitions[name] = defn
 
@@ -835,7 +842,7 @@ class Deployment(object):
             nixops.parallel.run_tasks(nr_workers=len(self.active), tasks=self.machines.itervalues(), worker_fun=worker)
 
 
-    def backup(self, include=[], exclude=[]):
+    def backup(self, include=[], exclude=[], devices=[]):
         self.evaluate_active(include, exclude)
         backup_id = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -846,7 +853,7 @@ class Deployment(object):
                 res = subprocess.call(["ssh", "root@" + ssh_name] + m.get_ssh_flags() + ["sync"])
                 if res != 0:
                     m.logger.log("running sync failed on {0}.".format(m.name))
-            m.backup(self.definitions[m.name], backup_id)
+            m.backup(self.definitions[m.name], backup_id, devices)
 
         nixops.parallel.run_tasks(nr_workers=5, tasks=self.active.itervalues(), worker_fun=worker)
 
@@ -1271,8 +1278,8 @@ def _create_state(depl, type, name, id):
 # Automatically load all resource types.
 def _load_modules_from(dir):
     for module in os.listdir(os.path.dirname(__file__) + "/" + dir):
-        if module[-3:] != '.py' or module == "__init__.py": continue
-        __import__("nixops." + dir + "." + module[:-3], globals(), locals())
+        if module[-3:] != '.py' or module == "__init__.py" or "azure" in module: continue
+        importlib.import_module("nixops." + dir + "." + module[:-3])
 
 _load_modules_from("backends")
 _load_modules_from("resources")

@@ -135,6 +135,27 @@ let
     config = {};
   };
 
+  fileSystemsOptions = { config, ... }: {
+    options = {
+      azure = mkOption {
+        default = null;
+        type = with types; uniq (nullOr (submodule azureDiskOptions));
+        description = ''
+          Azure disk to be attached to this mount point.  This is
+          a shorthand for defining a separate
+          <option>deployment.azure.blockDeviceMapping</option>
+          attribute.
+        '';
+      };
+    };
+    config = mkIf(config.azure != null) {
+      device = mkDefault (
+          if config.azure.encrypt then "/dev/mapper/${luksName (mkDefaultEphemeralName config.mountPoint config.azure)}"
+                                  else "/dev/disk/by-lun/${toString config.azure.lun}"
+        );
+    };
+  };
+
 in
 {
   ###### interface
@@ -154,6 +175,15 @@ in
         example = "westus";
         type = types.str;
         description = "The Azure data center location where the virtual machine should be created.";
+      };
+      
+      usePrivateIpAddress = mkOption {
+        default = false;
+        example = true;
+        type = types.bool;
+        description = ''
+          If instance is in a subnet/VPC whether to use the private IP address for ssh connections to this host. Defaults to false due to networkInterfaces.default.ip.obtain defaulting to true.
+        '';
       };
 
       size = mkOption {
@@ -360,26 +390,7 @@ in
     };
 
     fileSystems = mkOption {
-      options = { config, ... }: {
-        options = {
-          azure = mkOption {
-            default = null;
-            type = with types; uniq (nullOr (submodule azureDiskOptions));
-            description = ''
-              Azure disk to be attached to this mount point.  This is
-              a shorthand for defining a separate
-              <option>deployment.azure.blockDeviceMapping</option>
-              attribute.
-            '';
-          };
-        };
-        config = mkIf(config.azure != null) {
-          device = mkDefault (
-              if config.azure.encrypt then "/dev/mapper/${luksName (mkDefaultEphemeralName config.mountPoint config.azure)}"
-                                      else "/dev/disk/by-lun/${toString config.azure.lun}"
-            );
-        };
-      };
+      type = with types; loaOf (submodule fileSystemsOptions);
     };
 
   };

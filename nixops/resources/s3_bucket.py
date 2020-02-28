@@ -5,6 +5,7 @@
 import time
 import botocore
 import boto3
+import json
 import nixops.util
 import nixops.resources
 import nixops.ec2_utils
@@ -27,9 +28,12 @@ class S3BucketDefinition(nixops.resources.ResourceDefinition):
         self.region = xml.find("attrs/attr[@name='region']/string").get("value")
         self.access_key_id = xml.find("attrs/attr[@name='accessKeyId']/string").get("value")
         self.policy = xml.find("attrs/attr[@name='policy']/string").get("value")
+        self.lifecycle = xml.find("attrs/attr[@name='lifeCycle']/string").get("value")
+        self.versioning = xml.find("attrs/attr[@name='versioning']/string").get("value")
         self.website_enabled = self.config["website"]["enabled"]
         self.website_suffix = self.config["website"]["suffix"]
         self.website_error_document = self.config["website"]["errorDocument"]
+        self.persist_on_destroy = self.config["persistOnDestroy"]
 
     def show_type(self):
         return "{0} [{1}]".format(self.get_type(), self.region)
@@ -42,6 +46,8 @@ class S3BucketState(nixops.resources.ResourceState):
     bucket_name = nixops.util.attr_property("ec2.bucketName", None)
     access_key_id = nixops.util.attr_property("ec2.accessKeyId", None)
     region = nixops.util.attr_property("ec2.region", None)
+    versioning = nixops.util.attr_property("versioning", None)
+    persist_on_destroy = nixops.util.attr_property("persistOnDestroy", False)
 
 
     @classmethod
@@ -107,6 +113,24 @@ class S3BucketState(nixops.resources.ResourceState):
                 self.state = self.UP
                 self.bucket_name = defn.bucket_name
                 self.region = defn.region
+                self.persist_on_destroy = defn.persist_on_destroy
+
+        try:
+
+            if self.versioning != defn.versioning:
+                self.log("Updating versioning configuration on ‘{0}’...".format(defn.bucket_name))
+                s3client.put_bucket_versioning(Bucket = defn.bucket_name,
+                                                VersioningConfiguration = {'Status': defn.versioning})
+                with self.depl._db:
+                    self.versioning = defn.versioning
+
+            if self.persist_on_destroy != defn.persist_on_destroy:
+                with self.depl._db:
+                    self.persist_on_destroy = defn.persist_on_destroy
+
+        except botocore.exceptions.ClientError as e:
+            self.log("An Error occured while Updating versioning configuration on ‘{0}’...".format(defn.bucket_name))
+            raise e
 
         if defn.policy:
             self.log("setting S3 bucket policy on ‘{0}’...".format(defn.bucket_name))
@@ -119,6 +143,17 @@ class S3BucketState(nixops.resources.ResourceState):
                 # This seems not to happen - despite docs indicating it should:
                 # [http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketDELETEpolicy.html]
                 if e.response['ResponseMetadata']['HTTPStatusCode'] != 204: raise # (204 : Bucket didn't have any policy to delete)
+
+        if defn.lifecycle:
+            self.log("setting S3 bucket lifecycle configuration on ‘{0}’...".format(defn.bucket_name))
+            s3client.put_bucket_lifecycle_configuration(Bucket = defn.bucket_name,
+                                       LifecycleConfiguration = json.loads(defn.lifecycle))
+        else:
+            try:
+                s3client.delete_bucket_lifecycle(Bucket = defn.bucket_name)
+            except botocore.exceptions.ClientError as e:
+                self.log("An Error occured while deleting lifecycle configuration on ‘{0}’...".format(defn.bucket_name))
+                raise e
 
         if not defn.website_enabled:
             try:
@@ -135,6 +170,11 @@ class S3BucketState(nixops.resources.ResourceState):
 
     def destroy(self, wipe=False):
         if self.state == self.UP:
+            if self.persist_on_destroy:
+                self.warn("S3 bucket '{}' will be left due to the usage of"
+                          " persistOnDestroy = true".format(self.bucket_name))
+                return True;
+
             self.connect()
             try:
                 self.log("destroying S3 bucket ‘{0}’...".format(self.bucket_name))

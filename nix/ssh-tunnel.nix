@@ -87,6 +87,7 @@ with lib;
         remoteCommand = mkAddrConf v.remoteTunnel v.remoteIPv4 v.localIPv4;
 
       in "ssh -i ${v.privateKey} -x"
+       + " -o StrictHostKeyChecking=accept-new"
        + " -o PermitLocalCommand=yes"
        + " -o ServerAliveInterval=20"
        + " -o LocalCommand='${localCommand}'"

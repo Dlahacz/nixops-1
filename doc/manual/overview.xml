@@ -235,6 +235,7 @@ $ nixops destroy -d trivial
 warning: are you sure you want to destroy VirtualBox VM ‘webserver’? (y/N) y
 webserver> destroying VirtualBox VM...
 webserver> 0%...10%...20%...30%...40%...50%...60%...70%...80%...90%...100%
+webserver> 0%...10%...20%...30%...40%...50%...60%...70%...80%...90%...100%
 </screen>
 
 You can use the option <option>--confirm</option> to confirm all
@@ -829,6 +830,12 @@ under NixOps control.
 
 
 <section xml:id="sec-deploying-to-azure"><title>Deploying to Microsoft Azure</title>
+  <warning>
+    <para>
+      The Azure backend in Nixops is now disabled. See <link xlink:href="https://github.com/NixOS/nixops/pull/1131">PR#1131</link>
+    </para>
+    <para>For existing deployments, Azure backend is supported in Nixops up to release 1.6.1 only.</para>
+  </warning>
   <para>Note: only ARM(Azure Resource Manager) mode is supported by this backend.</para>
 
   <para><xref linkend="ex-physical-multi-azure.nix" /> shows a physical
@@ -1735,7 +1742,7 @@ $ nixops check -d load-balancer-ec2
 
 This indicates that Apache httpd has failed on
 <literal>backend1</literal> and that machine
-<literal>backend</literal> is not running at all.  In this situation,
+<literal>backend2</literal> is not running at all.  In this situation,
 you should run <command>nixops deploy --check</command> to repair the
 deployment.</para>
 
@@ -1939,6 +1946,60 @@ deploy the new configuration.
     until the keys are available, and <command>systemctl status</command> and friends
     will lead you to the cause.
   </para>
+</section>
+
+<section>
+  <title>Special NixOS module inputs</title>
+  <para>
+    In deployments with multiple machines, it is often convenient to access the
+    configuration of another node in the same network, e.g. if you want to
+    store a port number only once.  </para>
+  <para>
+    This is possible by using the extra NixOS module input <literal>nodes</literal>.
+  </para>
+  <para>
+    <programlisting>
+{
+  network.description = "Gollum server and reverse proxy";
+
+  gollum =
+    { config, pkgs, ... }:
+    { 
+      services.gollum = {
+        enable = true;
+        port = 40273;
+      };
+      networking.firewall.allowedTCPPorts = [ config.services.gollum.port ];
+    };
+
+  reverseproxy =
+    { config, pkgs, nodes, ... }:
+    let
+      gollumPort = nodes.gollum.config.services.gollum.port;
+    in
+    { 
+      services.nginx = {
+        enable = true;
+        virtualHosts."wiki.example.net".locations."/" = {
+          proxyPass = "http://gollum:${toString gollumPort}";
+        };
+      };
+      networking.firewall.allowedTCPPorts = [ 80 ];
+    };
+}
+    </programlisting>
+  </para>
+  <para>
+    Moving the port number to a different value is now without the risk of an inconsistent deployment.
+  </para>
+  <para>
+    Aditional module inputs are
+  </para>
+  <itemizedlist> 
+    <listitem><para><literal>name</literal>: The name of the machine.</para></listitem>
+    <listitem><para><literal>uuid</literal>: The NixOps UUID of the deployment.</para></listitem>
+    <listitem><para><literal>resources</literal>: NixOps resources associated with the deployment.</para></listitem>
+  </itemizedlist> 
 </section>
 
 <!--

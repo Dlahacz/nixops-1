@@ -5,7 +5,7 @@
 
 let
   pkgs = import nixpkgs { };
-  version = "1.6.1" + (if officialRelease then "" else "pre${toString nixopsSrc.revCount}_${nixopsSrc.shortRev}");
+  version = "1.7" + (if officialRelease then "" else "pre${toString nixopsSrc.revCount}_${nixopsSrc.shortRev}");
 
 in
 
@@ -39,6 +39,9 @@ rec {
           cp ${import ./doc/manual/resource.nix { revision = nixopsSrc.rev; module = ./nix + ("/" + fn + ".nix"); inherit nixpkgs; }} doc/manual/${fn}-options.xml
         '') [ "ebs-volume" "sns-topic" "sqs-queue" "ec2-keypair" "s3-bucket" "iam-role" "ssh-keypair" "ec2-security-group" "elastic-ip"
               "cloudwatch-log-group" "cloudwatch-log-stream" "elastic-file-system" "elastic-file-system-mount-target"
+              "vpc" "vpc-customer-gateway" "vpc-dhcp-options" "vpc-egress-only-internet-gateway" "vpc-endpoint"
+              "vpc-internet-gateway" "vpc-nat-gateway" "vpc-network-acl" "vpc-network-interface" "vpc-network-interface-attachment"
+              "vpc-route" "vpc-route-table" "vpc-route-table-association" "vpc-subnet"
               "gce-disk" "gce-image" "gce-forwarding-rule" "gce-http-health-check" "gce-network"
               "gce-static-ip" "gce-target-pool" "gse-bucket"
               "datadog-monitor" "datadog-timeboard" "datadog-screenboard"
@@ -70,13 +73,14 @@ rec {
   build = pkgs.lib.genAttrs [ "x86_64-linux" "i686-linux" "x86_64-darwin" ] (system:
     with import nixpkgs { inherit system; };
 
-    python2Packages.buildPythonPackage rec {
+    python2Packages.buildPythonApplication rec {
       name = "nixops-${version}";
-      namePrefix = "";
 
       src = "${tarball}/tarballs/*.tar.bz2";
 
       buildInputs = [ python2Packages.nose python2Packages.coverage ];
+
+      nativeBuildInputs = [ pkgs.mypy ];
 
       propagatedBuildInputs = with python2Packages;
         [ prettytable
@@ -85,17 +89,22 @@ rec {
           hetzner
           libcloud
           libvirt
-          azure-storage
-          azure-mgmt-compute
-          azure-mgmt-network
-          azure-mgmt-resource
-          azure-mgmt-storage
           adal
           # Go back to sqlite once Python 2.7.13 is released
           pysqlite
           datadog
           digital-ocean
-        ];
+          typing
+        ] ++
+        #FIXME add back once https://github.com/NixOS/nixops/pull/1131
+        # is reverted.
+        (lib.optional false [
+          azure-storage
+          azure-mgmt-compute
+          azure-mgmt-network
+          azure-mgmt-resource
+          azure-mgmt-storage
+        ]);
 
       # For "nix-build --run-env".
       shellHook = ''
@@ -104,6 +113,15 @@ rec {
       '';
 
       doCheck = true;
+
+      postCheck = ''
+        # We have to unset PYTHONPATH here since it will pick enum34 which collides
+        # with python3 own module. This can be removed when nixops is ported to python3.
+        PYTHONPATH= mypy --cache-dir=/dev/null nixops
+
+        # smoke test
+        HOME=$TMPDIR $out/bin/nixops --version
+      '';
 
       # Needed by libcloud during tests
       SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";

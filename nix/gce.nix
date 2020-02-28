@@ -189,6 +189,28 @@ let
 
   };
 
+  fileSystemsOptions = { config, ... }: {
+    options = {
+      gce = mkOption {
+        default = null;
+        type = with types; uniq (nullOr (submodule gceDiskOptions));
+        description = ''
+          GCE disk to be attached to this mount point.  This is
+          shorthand for defining a separate
+          <option>deployment.gce.blockDeviceMapping</option>
+          attribute.
+        '';
+      };
+    };
+    config = mkIf(config.gce != null) {
+      device = mkDefault "${
+          if config.gce.encrypt then "/dev/mapper/" else gce_dev_prefix
+        }${
+          get_disk_name (mkDefaultDiskName config.mountPoint config.gce)
+      }";
+    };
+  };
+
 in
 {
   ###### interface
@@ -271,6 +293,14 @@ in
         type = with types; nullOr str;
         description =  ''
           Specifies the subnet that the instances will be part of.
+        '';
+      };
+
+      canIpForward = mkOption {
+        default = false;
+        type = types.bool;
+        description = ''
+          Allows the instance to send and receive packets with non-matching destination or source IPs.
         '';
       };
 
@@ -372,27 +402,7 @@ in
     };
 
     fileSystems = mkOption {
-      options = { config, ... }: {
-        options = {
-          gce = mkOption {
-            default = null;
-            type = with types; uniq (nullOr (submodule gceDiskOptions));
-            description = ''
-              GCE disk to be attached to this mount point.  This is
-              shorthand for defining a separate
-              <option>deployment.gce.blockDeviceMapping</option>
-              attribute.
-            '';
-          };
-        };
-        config = mkIf(config.gce != null) {
-          device = mkDefault "${
-              if config.gce.encrypt then "/dev/mapper/" else gce_dev_prefix
-            }${
-              get_disk_name (mkDefaultDiskName config.mountPoint config.gce)
-          }";
-        };
-      };
+      type = with types; loaOf (submodule fileSystemsOptions);
     };
 
   };
