@@ -41,7 +41,6 @@ python2Packages.buildPythonApplication {
   '';
 
   postInstall = ''
-    make -C doc/manual install nixops.1 docbookxsl=${docbook_xsl_ns}/xml/xsl/docbook \
       docdir=$out/share/doc/nixops mandir=$out/share/man
     mkdir -p $out/share/nix/nixops
     cp -av "nix/"* $out/share/nix/nixops
